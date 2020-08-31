@@ -1,0 +1,789 @@
+一.ECMAScript
+
+ECMAScript和JavaScript
+
+1）ECMAScript（ES）是JavaScript的标准化规范
+2）JavaScript是ECMAScript的扩展语言
+3）ECMAScript只提供了基本的语法
+4）浏览器环境的JavaScript = ECMAScript+（Dom+Bom）Web Api
+5）Node环境的JavaScript = ECMAScript+(fs+net+etc.) Node Api
+
+备注：ECMA2015 = ES6，因为15年发布第六个版本
+
+1.作用域
+
+定义：某个成员能够起作用的范围
+
+1）全局作用域
+var 有变量提示的特性
+
+2）函数作用域
+
+3）块级作用域
+
+let 没有变量提示的特性，使用闭包的原理把变量封锁在一个独立的块内
+const 声明常量，在let的基础上多了一个只读特性，声明时，必须有一个初始值，声明的成员不能被修改（不允许重新指向一个新的内存地址）
+
+2.数组的解构
+
+1）声明解构语法，变量必须对应所对应的值，必须符合解构语法
+const arr = [100, 200, 300]
+const [foo,bar , baz] = arr
+
+2）...表示把剩余数据存放到变量中（已数组方式返回），只能在最后一个成员使用
+const arr = [100, 200, 300]
+const [foo,...rest] = arr
+
+3）给变量设置默认值
+const [foo, bar, baz, more = 'default'] = arr
+
+3.对象的解构
+
+1）解构的变量要对应对象中的key
+const obj = { name: 'kjy', age: 24 }
+
+const { name } = obj
+
+console.log(name)
+
+2）重名变量
+const name = 'kjy'
+const { name:myName } = obj
+
+3）赋值默认值
+const { name: myName = 'kxy' } = obj
+
+4.标签模板字符串
+
+1）对输出结果进行加工
+
+const name = 'kjy'
+
+const gender = true
+
+function myTagFunc(strings,name,gender){
+  console.log(strings)
+  console.log(name)
+  console.log(gender)
+  // return '123'
+  return strings[0]+name+strings[1]+gender+strings[2]
+}
+
+const result = myTagFunc`hey,${name} is a ${gender}`
+
+console.log(result)
+
+5.模板字符串扩展方法
+
+常用：
+
+includes()
+startsWith()
+endsWith()
+
+6.参数的默认值
+
+当没有传入参数或者undefined时使用默认值
+function foo(enable = true){
+  console.log('foo invoked - enable：')
+  console.log(enable)
+}
+
+注意：带有默认值一定要放到参数列表的最后
+
+7. ...操作符
+
+1）剩余参数
+args以数组形式接受对应位置之后的所有实参
+function foo(...args){
+  console.log(args)
+}
+
+注意：剩余参数参数列表的最后
+
+2）数组展开
+
+const arr = [100,200,300]
+console.log(...arr)
+
+8.Object
+
+1）assign()
+
+将多个源对象中的属性复制到一个目标对象中，如果属性相同，源对象中的属性就会覆盖目标对象中的属性
+
+const source1 = {
+  a:123,
+  b:456
+}
+
+const target = {
+  a:456,
+  c:456
+}
+
+const result = Object.assign(target,source2)
+
+console.log(result)//{ a: 456, b: 456, c: 456 }
+
+2）is()
+对比两个值
+
+console.log(Object.is(+0,-0))
+console.log(Object.is(NaN,NaN))
+
+9.Proxy
+
+代理对象：监听对象属性读写
+
+const personProxy = new Proxy(person, {
+  // target：目标对象
+  // property：监听属性
+  get(target, property) {
+    return property in target ? target[property] : undefined
+    // console.log(target,property)
+    // return 100
+  },
+  // target：目标对象
+  // property：属性
+  // value：属性值
+  set(target, property, value) {
+    console.log(target, property, value)
+  },
+  // target：目标对象
+  // property: 属性
+  deleteProperty(target, property) {
+    console.log('delete', property)
+    delete target[property]
+  }
+})
+
+personProxy.gender = true
+
+console.log(personProxy.name)
+
+对比Object.defindProperty()
+
+优势：
+1.Proxy更为强大一些，Object.defindProperty()只能监听对象的读取和写入，Proxy可以监视更多对象的操作（比如对象属性的删除，调用）
+2.Proxy是以非侵入的方式监管了对象的读写
+
+10.Reflect
+
+统一对象操作API
+
+Reflect是一个静态类，不能new
+
+有14个静态方法，有一个已经被废弃，Reflect方法就是Proxy处理对象的内部实现
+
+Reflect.get(target,property);获取属性
+Reflect.has(target,property);对象中是否存在某一个属性
+Reflect.deleteProperty(target,property);删除属性
+Reflect.ownKeys(target);获取属性名
+
+11.Set
+
+内部成员不允许重复
+
+const s = new Set()
+
+s.add(1).add(2).add(3).add(1)
+
+//console.log(s) Set { 1, 2, 3 }
+
+s.forEach(i => console.log(i))
+s.size 访问Set长度
+s.has(100)是否有100这个元素
+s.delete(3)删除3这个元素
+s.clear()清除Set中的所有元素
+
+12.Map
+
+键值对集合，解决对象中key只能存字符串的问题
+
+const m = new Map()
+
+const tom = { name: 'Tom' }
+
+m.set(tom, 20)
+
+console.log(m)
+
+console.log(m.get(tom))
+
+m.has(tom)是否存在某个键
+m.delete()删除某个键
+m.clear()清空
+
+13.for of 循环
+
+1.可得到每个元素的值，相比较for in（只能得到元素的下标）这更能快速的处理数据
+2.Set，Map，伪数组也可以用for of循环
+3.不能遍历普通对象
+4.能够通过for of遍历的必须实现Iterator接口
+
+14.Iterator
+
+const obj = {
+  store: ['foo', 'bar', 'baz'],
+  // 可迭代方法，必须有一个返回实现Iterable迭代器的接口
+  [Symbol.iterator]: function () {
+    let index = 0
+    const self = this
+    // 迭代器接口，内部必须有一个用于迭代的next方法
+    return {
+      next: function () {
+        // 迭代结果接口
+        const result = {
+          value: self.store[index],
+          done: index >= self.store.length
+        }
+        index++
+        return result
+      }
+    }
+  }
+}
+
+for (const i of obj) {
+  console.log(i)
+}
+
+二.TypeScript
+
+1.强类型与弱类型
+
+从类型安全这一维度去区分编程语言
+
+强类型
+
+1）限制数据的类型，类型不匹配，则会报错
+2）强类型语言中不允许隐性的数据类型转换
+
+优势
+1）错误可以更早暴漏
+2）代码更智能，编码更准确
+3）重构更加牢靠
+4）减少不必要的类型判断
+
+弱类型
+
+1）不限制数据的类型，类型不匹配，则不会报错，但是在运行时，可能会出现问题
+2）弱类型语言中允许隐性的数据类型转换
+
+缺点
+1）必须等到运行阶段才可以发现异常
+2）类型不明确，造成函数功能会发生改变
+3）对象定义key时，由于可存在任意类型，但是对象的key是默认转换伟String的，这就会造成索引器用法错误
+
+2.静态类型和动态类型
+
+从类型检查这一维度去区分编程语言
+
+静态类型
+
+变量声明时类型就是明确的，类型就不允许被修改
+
+动态类型
+
+运行阶段才能够明确变量的类型，类型可以被修改（例如：Javascript）
+
+3.Flow
+
+node模块为flow-bin
+yarn flow init 初始化Flow的配置文件
+写代码（需添加// @flow）类型注解
+运行yarn flow
+yarn flow stop 停止flow服务
+
+编译移除注解
+flow-remove-types模块
+yarn flow-remove-types src（源目录） -d dist（目标目录）
+
+babel编译移除注解
+
+@babel/core @babel/cli @babel/preset-flow
+添加babel配置文件.babelrc
+{
+  "presets": [
+    "@babel/preset-flow"
+  ]
+}
+yarn babel src -d dist
+
+原始类型
+
+const a: string = 'a'
+
+const b: number = 100
+
+const c: boolean = true
+
+const d: null = null
+
+const e: void = undefined
+
+const f: symbol = Symbol()
+
+数组类型
+
+const arr1: Array<string> = ['1', '2']
+
+const arr2: number[] = [1, 2, 3]
+
+//元组（固定个数的数组）
+const arr3: [string, number] = ['1', 2]
+
+对象类型
+
+const obj1: { foo: string, bar: number } = { foo: 'foo', bar: 24 }
+
+//可选属性
+const obj2: { foo: string, bar?: number } = { foo: 'foo' }
+
+const obj3:{[string]:number} = {}
+
+obj3.key1 = 100
+obj3.key2 = 200
+
+函数类型
+
+function foo(callback: (string, number) => void) {
+  callback('string', 100)
+}
+
+特殊类型
+
+//字面量类型
+const a: 'foo' = 'foo'
+
+const type: 'success' | 'warning' | 'danger' = 'success'
+
+// type声明一个类型
+type StringOrNumber = string | number
+
+const b: StringOrNumber = 100
+
+// maybe类型,在声明的类型前面加一个?
+
+const gender: ?number = null
+
+mixed类型
+
+所有类型的联合类型（任意类型）
+
+any类型（弱类型），为了兼容以前的老代码
+
+所有类型的联合类型（任意类型）
+
+4.TypeScript
+
+Javascript的超集（superset）
+
+TypeScript = JavaScript + ES6+ + 类型系统
+
+安装typescript：npm i typescript
+
+tsc命令
+
+初始化配置文件：yarn tsc --init
+
+编译typeScript文件：yarn tsc .\src\01-getting-started.ts
+
+标准库：内置对象所对应的声明
+
+原始类型：string,number,boolean（严格模式下不允许为null，非严格模式下可以为null）
+
+object
+
+object类型并不是单只对象，而是除了原始类型以外的其他类型
+
+定义对象类型
+
+使用字面量语法（更专业的是用接口），在定义对象的时候，完全要和定义好的对象属性和类型完全一致
+const obj:{name:string,age:number} = {name:'kjy',age:24}
+
+Array
+
+const arr1: Array<number> = [1, 2, 3]
+
+const arr2: number[] = [1, 2, 3]
+
+元组类型
+
+const arr3: [string, number] = ['string', 213]
+
+Enum（枚举类型）
+
+特点：
+
+1.给一组数值分别起一个更好理解的名字
+2.一个枚举值只存在几个固定的值，不会存在超出范围的可能性
+
+enum PostStatus {
+  Draft = 0,
+  Unpublished = 1,
+  Published = 2
+}
+
+可以不用给属性指定值，默认是从第一个开始累加
+
+函数类型
+
+function func1(a: number, b: number): string {
+  return 'func1'
+}
+
+func1(1,2)
+
+任意类型
+
+const foo: any = 'any'
+
+function stringify(value: any) {
+  return JSON.stringify(value)
+}
+
+类型断言
+
+const arr = [100,200,300]
+
+const res = arr.find(i=>i>0)
+
+类型断言方式1
+const num1 = res as number
+
+类型断言方式2
+const num2 = <number>res
+
+Interface（接口）
+
+可以约定对象的结构
+
+interface Post {
+  title: string
+  // ? 为可选成员
+  subtitle?: string
+  content: string
+  // readonly 为只读关键词
+  readonly summary: string
+}
+
+// 动态接口
+interface Cache{
+  [key:string]: string
+}
+
+function printPost(post: Post) {
+  console.log(post.title)
+  console.log(post.content)
+}
+
+class
+
+class Person {
+  // 属性在使用之前必须要在类中声明，并且需要赋值，可以声明时赋值也可以在构造函数中赋值
+  name: string
+  age: number
+  constructor(name: string, age: number) {
+    this.name = name
+    this.age = age
+  }
+}
+
+访问修饰符：
+
+1）public 公有成员（默认）
+2）private 私有属性 （不能在外部访问）
+3）protected 受保护的 （不能在外部访问，允许在子类中访问）
+
+备注：readonly只能跟在访问修饰符后边
+
+类和接口
+
+interface Eat {
+  eat(food: string): void
+}
+
+interface Run {
+  run(distance: number): void
+}
+
+class Person implements Eat, Run {
+  eat(food: string): void {
+    console.log(`优雅的进餐：${food}`)
+  }
+
+  run(distance: number): void {
+    console.log(`直立行走：${distance}`)
+  }
+}
+
+class Animate {
+  eat(food: string): void {
+    console.log(`呼噜呼噜的吃：${food}`)
+  }
+
+  run(distance: number): void {
+    console.log(`爬行：${distance}`)
+  }
+}
+
+抽象类
+
+// 定义为抽象类之后只能被继承，不能被new
+abstract class Animate {
+  eat(food: string): void {
+    console.log(`呼噜呼噜的吃：${food}`)
+  }
+  abstract run(distance: number): void
+}
+
+class Dog extends Animate {
+  run(distance: number): void {
+    console.log(`爬行：${distance}`)
+  }
+}
+
+const d = new Dog()
+
+d.run(100)
+
+泛型
+
+function createArray<T>(length: number, value: T): T[] {
+  const arr = Array<T>(length).fill(value)
+  return arr
+}
+
+类型声明
+
+declare function camelCase(input: string): string
+
+安装lodash的类型声明模块
+
+npm install @types/lodash
+
+三.JavaScript性能优化
+
+1.内存管理
+
+内存：由可读写单元组成，表示一片可操作空间
+
+管理：人为的去操作一片空间的申请，使用和释放
+
+内存管理：开发者主动申请空间，使用空间，释放空间
+
+// 申请空间
+
+let obj = {}
+
+// 使用空间
+
+obj.name = 'kjy'
+
+// 释放空间
+
+obj = null
+
+2.垃圾回收
+
+javascript的内存管理是自动的
+
+对象不在被引用时是垃圾
+
+对象不能从根上访问时是垃圾
+
+可达对象：同一作用域内，从根上可以访问到的对象
+
+可达的标准是从根出发（全局变量对象）是否能被找到
+
+3.GC算法
+
+GC是一种机制，垃圾回收器完成具体的工作
+工作的内容就是查找垃圾，释放空间，回收空间
+算法就是工作时查找和回收所遵循的规则
+
+GC：
+
+1）垃圾回收机制的简写
+2）可以找到内存中的垃圾，并释放和回收内存空间
+
+常见的GC算法：
+
+1）引用计数
+
+核心思想：设置引用数，判断当前引用数是否为0
+
+引用计数器
+
+引用关系改变时，修改引用数
+
+引用数为0时立即回收
+
+优点：
+
+1）发现垃圾立即回收
+2）最大限度减少程序暂停
+
+缺点：
+
+1）无法回收循环引用的对象
+2）时间开销大
+
+2.标记清除
+
+核心思想：分标记和清除两个阶段
+
+遍历所有对象标记活动对象
+
+遍历所有对象清除没有标记对象
+
+回收相应的空间（回收的空间会被放入空闲链表中，以便后边的程序接着使用）
+
+优点：
+
+解决无法回收循环引用的对象
+
+缺点：
+
+1）地址不连续（空间碎片化）
+2）不能立即回收垃圾对象
+
+3.标记整理
+
+标记整理算法是标记清除的增强
+
+标记阶段的操作和标记清除一致
+
+清除阶段会先执行整理，移动对象位置（可以在地址上产生连续）
+
+4.分代回收
+
+内存空间分为新生代和老生代
+
+针对不同的对象采用不同的算法
+
+4.V8
+
+V8是一款主流的JavaScript执行引擎
+
+V8采用即时编译
+
+V8内存设限（64位操作系统，上限是1.5G，32位操作系统，上限是800M）
+
+采用分代回收的思想
+
+V8中常见的GC算法
+
+1）分代回收
+2）空间复制
+3）标记清除
+4）标记整理
+5）标记增量
+
+将垃圾回收操作拆分成多个小步，组合完成整个回收，替代之前一口气执行垃圾回收，从而实现垃圾回收与程序执行交替完成
+
+V8内存空间一分为二（新生代内存空间和老生代内存空间）
+
+小空间用于存储新生代对象（32M|16M）
+
+新生代对象指的是存活时间较短的对象（局部变量）
+
+老年对象存放在老生代内存空间
+
+64位操作系统是1.4G，32位操作系统是700M
+
+老生代对象指的是存活时间较长的对象（全局变量，闭包所缓存的变量）
+
+V8如何回收新生代对象
+
+回收过程：空间复制+标记整理
+
+新生代内存区分为两个等大小空间
+
+使用空间为From，空闲空间为To
+
+活动对象存储待From空间
+
+标记整理后将活动对象拷贝至To空间
+
+From和To交换空间完成释放
+
+回收细节说明：
+
+1）拷贝过程中可能出现晋升（将新生代对象移动到老生代对象）
+2）一轮GC还存活的新生代需要晋升
+3）To空间的使用率超过25%
+
+V8如何回收老生代对象
+
+回收过程：标记清除+标记整理+标记增量
+
+首先采用标记清除完成垃圾空间回收
+标记整理进行空间优化（如果新生代内存空对象要移动到老生代内存空间，这时老生代内存空间不足以来存放这些对象）
+采用标记增量进行效率优化
+
+5.内存
+
+内存问题的体现
+
+1）页面出现延迟加载或经常性暂停
+2）页面持续性出现糟糕的性能
+3）页面的性能随着时间的加长越来越差
+
+界内内存问题的标准
+
+1）内存泄漏：内存的持续升高
+2）内存膨胀：在多数设备上都存在的性能问题
+3）频繁垃圾回收：通过内存变化图进行分析
+
+监控内存的几种方式
+
+1.浏览器任务管理器
+
+快捷键：shift+esc
+
+2.Timeline时序图记录
+
+3.堆快照查找分离Dom
+
+分离Dom
+
+1）界面元素存活在Dom树上
+2）垃圾对象时的Dom节点（dom元素从dom树脱离，并且js代码中没有引用该dom）
+3）分离状态的Dom节点（dom元素从dom树脱离，js代码中有引用dom）
+
+慎用全局变量
+
+1）全局变量定义在全局执行的上下文，是所有作用域链的顶端
+2）全局执行上下文一直存在于上下文执行栈，直到程序退出
+3）如果某个局部作用域出现同名变量则会遮蔽或污染全局
+
+缓存全局变量会提供程序速度
+
+通过原型对象添加附加方法会让函数执行速度变快
+
+属性访问方法会降低程序的速度
+
+
+for循环优化
+
+原理：将要循环数组的长度提前缓存下来，在做循环
+
+for(let i = 0,length < arr.length; i < length; i++){
+console.log(i)
+}
+
+性能等级
+forEach > for > for in
+
+文档碎片优化节点添加
+
+const fragEle = docment.createDocumentFragment()
+for(let i = 0; i < 10;i++){
+let op = document.createElement('p')
+op.innerHTML = i
+fragEle.appendChild(op)
+}
+document.body.appendChild(fragEle)
