@@ -1,0 +1,487 @@
+一.模块化开发
+
+1.模块化概述
+
+模块化只是思想，不是实践
+
+早期模块化：以单独的js文件来实现模块化
+
+缺点：
+
+1）污染全局作用域
+2）容易产生命名冲突
+3）无法管理模块与模块之间的依赖关系
+4）完全依靠约定
+
+模块化第二阶段：命名空间方式
+
+约定每一个模块暴漏一个全局的对象
+
+缺点：
+
+1）外部仍然可以修改模块内部属性
+2）无法管理模块与模块之间的依赖关系
+
+模块化第三阶段：采用立即执行函数的方式（闭包）
+
+实现私有成员的概念，确保了私有变量的安全
+可以自执行函数的参数作为依赖声明来使用，可以使模块之间的依赖关系变得明显
+
+2.模块化规范
+
+CommonJS规范
+
+约定：以同步的方式加载模块
+
+1）一个文件就是一个模块
+2）每个模块都有单独的作用域
+3）通过module.exports导出成员
+4）通过require函数载入模块
+
+浏览器规范
+
+异步模块定义规范：AMD（Asynchronous Module Definition）
+
+3.模块化标准规范
+
+nodejs环境中遵循CommonJS规范
+
+浏览器环境中 ES Modules规范
+
+4.ES Modules特性
+
+在html中通过给script标签添加 type=“module”的属性，就可以以 ES Module 的标准执行其中的 JS 代码
+
+1）ES Module中会自动采用严格模式，忽略 'use strict' 
+2）每一个ES Module都是单独运行在一个私有作用域中
+3）ES Module 是通过 CORS 的方式请求外部 JS 模块
+4）ES Module 的 script 标签会延迟执行脚本
+
+5.ES Module导入导出
+
+export 导出
+
+const name = 'kjy'
+const age = 24
+export { name,age }
+
+注意：
+
+1）如果导出时，as后面重命名的名称为 default ，import时，就需要给default进行重命名
+2）export {} 是固定的用法，并不是导出一个对象，如果要导出一个对象，需要export default { ... }
+3）export导出成员时，是导出成员的引用
+
+import 导入
+
+import { name,age } from './module.js'
+
+注意：
+
+1）import { name,age }是固定的用法，并不是解构
+2）导入的成员是一个只读的成员，并不能去修改
+3）导入的文件不能省略扩展名，如：import { name } from './module.js'中的.js
+4）导入的文件如果是相对路径是，不能省略 ./ ，如果省略，导入的文件是以字母开头，ES Module会认为是加载的第三方模块
+5）如果只是执行导入模块中的成员时，可以 import {}  from './module.js' 或 import './module.js'
+6）如果导出的成员很多，在导入时都需要用到，可以使用 import * from './module.js'的方式全部导入
+7）import必须出现在最顶层，不能导入时 from一个变量（var modulePath = 'module.js'）或 嵌套在 if等其他函数中，这时需要调用全局的 import('./module.js')函数，会
+返回一个Promise，可以在then中拿到导入的成员
+
+5.ES Module兼容性
+
+IE不支持ES Module的方式
+
+polyfill：
+
+ES Module Loader
+<script nomodule src="https://unpkg.com/browser-es-module-loader@0.4.1/dist/babel-browser-build.js"></script>
+<script nomodule src="https://unpkg.com/browse/browser-es-module-loader@0.4.1/dist/browser-es-module-loader.js"></script>
+
+Pormise
+<script nomodule src="https://unpkg.com/browse/promsie-polyfill@8.1.3/dist/polyfill.min.js"></script>
+
+6.ES Module in Node.js的支持情况
+
+1）修改js为mjs
+2）启动node时需要加上一个 --experimental-modules（代表要启用es module的特性） index.mjs
+3）ES Module可以载入CommonJS的成员
+4）不能在CommonJS中通过require载入ES Module
+5）CommonJS始终只会导出一个默认成员
+6）ES Module 没有 CommonJS中的模块全局成员
+
+二.webpack打包
+
+1.模块打包工具的由来
+
+1）ES Module存在环境兼容问题
+2）模块文件过多，网络请求频繁
+3）所有的前端资源都需要模块化
+
+2.模块打包工具概要
+
+webpack
+
+模块打包工具
+
+1）可以将零散的模块代码打包到同一个js文件中
+2）代码中有环境兼容问题的代码，可以在打包的过程中，通过模块加载器（loader）对其进行编译转换
+3）具备代码拆分的能力
+4）支持在javaScript中载入任意类型资源文件
+
+打包工具解决的是前端整体的模块化，并不单指JavaScript模块化
+
+安装webpack
+
+npm i webpack webpack-cli --dev
+
+通过src下的index.js作为打包的入口，生成dist/main.js
+
+执行webpack
+
+yarn webpack
+
+3.webpack配置文件
+
+// 运行在node环境中，所以需要用CommonJS语法
+const path = require('path')
+module.exports = {
+    // 指定webpack打包入口路径
+    entry: './src/main.js',
+    // 输出文件的位置，值是一个对象
+    output: {
+        filename: 'bundle.js', // 指定打包js名称
+        path: path.join(__dirname, 'output') // 执行输出目录，必须是绝对路径
+    }
+}
+
+4.Webpack工作模式
+
+1）通过cli参数设置工作模式
+可以指定 --mode的参数，模式是production（生产模式，自动优化和压缩代码），development（开发模式，会自动优化打包的速度，添加一些调试的辅助到代码中），none（运行最原始的打包）
+
+2）在webpack配置文件中设置工作模式
+
+// 运行在node环境中，所以需要用CommonJS语法
+const path = require('path')
+module.exports = {
+    mode: 'production', // webpack工作模式
+    // 指定webpack打包入口路径
+    entry: './src/main.js',
+    // 输出文件的位置，值是一个对象
+    output: {
+        filename: 'bundle.js', // 指定打包js名称
+        path: path.join(__dirname, 'output') // 执行输出目录，必须是绝对路径
+    }
+}
+
+5.Webpack资源模块加载
+
+loader是webpack的核心特性，通过不同的loader可以加载任何类型的资源
+
+webpack内部默认只会处理JavaScript文件，处理css文件时会报错
+
+安装css的loader，打包css文件
+
+npm i css-loader
+
+安装 style-loader，把css-loader转换的结果，通过style标签添加到页面上
+
+npm i style-loader
+
+6.webpack导入资源模块
+
+1）逻辑合理，JS确实需要资源文件
+2）确保上线资源不缺失，都是必要的
+
+7.Webpack文件资源加载器
+
+文件资源加载器 file-loader
+
+8.Webpack URL 加载器
+
+URL加载器 url-loader
+
+小文件使用 Data URLs，减少请求次数
+大文件单独提取存放，提高加载速度（file-loader）
+
+9.Webpack常用加载器分类
+
+1）编译转换类
+
+会把加载到的资源模块转换为js代码
+
+2）文件操作类
+
+会把加载到的资源模块拷贝到输出路径
+
+3）代码检查类
+
+统一代码的风格，提高代码质量
+
+10.Webpack与ES 2015
+
+安装babel-loader，对es 2015代码编译转换
+
+npm i babel-loader @babel/core @babel/preset-env
+
+webpack只是一个打包工具，加载器可以通过插件去转换代码当中的特性
+
+11.Webpack加载资源的方式
+
+1）遵循ES Module标准的import声明
+2）遵循CommonJS标准的require函数
+3）遵循AMD标准的define函数和require函数
+4）样式代码中的@import指令和url函数
+5）HTML代码中图片标签的src属性
+
+安装html-loader
+
+npm i html-loader，处理html代码
+
+默认只会处理html中的img的src属性
+
+12.Webpack核心工作原理
+
+以入口文件为入口，遍历入口文件和其他资源文件形成的依赖树，来打包项目，其中loader是整个流程的核心
+
+13.Webpack 开发一个loader
+
+安装markdown解析模块
+
+npm i marked
+
+14.Webpack插件
+
+clean-webpack-plugin 清理打包输出目录
+html-webpack-plugin 自动生成html
+copy-webpack-plugin 复制文件
+
+webpack要求插件必须是一个函数或者是一个包含apply方法的对象
+
+插件是通过在生命周期的钩子函数中挂载函数实现扩展
+
+注意：
+
+html-webpack-plugin和html-loader同时使用时会出现冲突，因为html-loader会编译html文件为字符串到输出js中，html-webpack-plugin无法再次操作改html文件，
+解决办法：
+
+1）将需要html-webpack-plugin操作的文件后缀名改为ejs
+2）html-loader配置exclude:/操作文件名称(index)\.html/
+
+15.Webpack自动编译
+
+启动webpack命令时，添加一个 --watch的参数，用于监听编译文件变化
+
+16.Webpack自动刷新浏览器
+
+Brower-sync会实现自动刷新的功能
+
+17.Webpack Dev Server
+
+自动监听编译文件变化，并且启动一个serve服务，监听页面变化，自动刷新浏览器，编译后的文件是存在内存中的，并没有存储到磁盘内，大大提高构建效率，添加
+--open的参数，会自动打开浏览器
+
+18.Source Map
+
+解决了源代码与运行代码不一致所产生的问题
+
+19.HMR（Hot Module Replacement 模块热替换）
+
+极大的提高了开发效率
+
+集成在webpack-dev-server工具中
+
+使用HMR，在运行webpack-dev-server时添加 --hot参数
+
+
+HMR API
+
+
+HMR（HotModuleReplacement插件）给module对象提供了一个hot对象，hot对象有一个accept方法，用来注册模块热替换
+
+20.Webpack不同环境配置
+
+1.配置文件根据环境不同导出不同配置（中小型项目）
+2.一个环境对应一个配置文件（大型项目）
+
+21.Tree Shaking
+
+去除冗余代码
+
+会在生产模式下自动开启
+
+不是webpack中的某一个配置选项
+
+是一组功能搭配使用的效果
+
+22.sideEffects
+
+可以在pakeage.json中配置
+sideEffects属性
+
+sideEffects:false或sideEffects:[...对应的没有副作用的模块] =》sideEffects:['./src/peo.js','*.css']
+
+23.代码分割
+
+1）多入口打包
+
+// 定义多个打包入口
+    entry: {
+        index: './src/index.js',
+        album: './src/album.js'
+    },
+    output: {
+        // 动态输出名称
+        filename: '[name].bundle.js'
+    },
+plugins: [
+        new CleanWebpackPlugin(),
+        new HtmlWebpackPlugin({
+            title: 'Multi Entity',
+            template: './src/index.html',
+            filename: 'index.html',
+            // 指定使用打包的js
+            chunks: ['index']
+        }),
+        new HtmlWebpackPlugin({
+            title: 'Multi Entity',
+            template: './src/album.html',
+            filename: 'album.html',
+            chunks: ['album']
+        })
+    ]
+2）动态导入
+import(文件路径)
+
+魔法注释：import(/* webpackChunkName: 'index' */ './src/index.js')就会以注释名的形式来命名分包js
+
+24.输出文件嘛Hash
+
+1）filename: '[name]-[hash].bundle.js' 项目级别的，项目中任何一个文件改动，都会产生hash值变化
+2）filename: '[name]-[chunkhash].bundle.js' chunk级别的，如果同一入口的文件改动，都会产生hash值变化，比hask更精确
+3）filename: '[name]-[contenthash].bundle.js' 文件级别的，如果文件改动，对应的文件hash值变化，控制长度 contenthash:8
+
+三.Rollup
+
+1.概述
+
+相比webpack，Rollup要小巧的多
+仅仅是一块ESM打包器，并没有其他额外的功能
+提供了一个充分利用ESM各项特性的高效打包器
+
+2.使用
+
+安装rollup
+npm i rollup
+
+执行打包命令
+npx rollup ./src/index.js --format(执行输出格式) iife(自调用函数格式) --file(指定输出文件) dist/bundle.js
+
+rollup只会保留代码中用到的代码
+
+使用rollup配置文件
+
+export default {
+    // 输入文件路径
+    input: './src/index.js',
+    // 输出文件
+    output: {
+        // 指定输出文件名
+        file: 'bundle.js',
+        // 指定输出文件格式
+        format: 'iife'
+    }
+}
+
+注意：打包时，需要指定为配置文件形式的打包，npx rollup --config rollup.config.js
+
+3.使用插件
+
+插件是rollup唯一扩展途径
+
+rollup-plugin-json 向代码中导入json
+rollup-plugin-node-resolve 通过模块名称导入npm模块，rollup只能处理es module模块，所以导入的npm模块必须是es module的模块，比如：lodash-es
+rollup-plugin-commonjs 加载commonjs模块
+
+4.代码拆分
+
+使用动态导入的方式实现代码拆分：import(导入文件路径)，返回一个Promsie，可以通过then方法获取导出的成员
+
+注意：
+
+1.如果使用代码拆分的话，rollup.config.js中的output的format属性不能是UMD和iife格式，一定要是amd
+2.输出一定要指定dir，不能指定file了，因为输出的是多个文件
+
+5.多入口打包
+
+// 多入口打包
+    // input: ['./src/index.js', './src/album.js'],
+    input: {
+        foo: './src/index.js',
+        bar: './src/album.js'
+    },
+
+注意：
+
+1.多入口打包内部会自动提取公共模块，内部会使用代码拆分，不能使用iife格式，需要将输出格式修改为amd
+
+6.rollup特性
+
+优点：
+
+1）输出结果更加扁平
+2）自动移除未引用的代码
+3）打包结果依然完全可读
+
+缺点：
+
+1）加载非ESM的第三方模块比较复杂
+2）模块最终都被打包到一个函数中，无法实现HMR
+3）浏览器环境中，代码拆分功能依赖AMD库
+
+四.规范化介绍
+
+1，规范化介绍
+
+规范化是前端工程化中重要的一部分
+
+哪里需要规范化标准：
+
+1）代码，文档，甚至是提交的日志
+2）开发过程中人为编写的成果物
+3）代码的标准化规范最为重要
+
+实施规范化的方法：
+
+1）编码前人为的标准约定
+2）通过工具实现Lint
+
+2.ESLint介绍
+
+1）最为主流的JavaScript Lint工具，监测JS代码质量
+2）ESLint很容易统一开发者的编码风格
+3）ESLint可以帮助开发者提升编码能力
+
+3.上手
+
+npx eslint --init 初始化eslint配置文件
+
+解决问题代码和代码风格：
+
+1）通过eslint的错误提示去修改
+2）执行 eslint时，添加 --fix参数
+
+配置注释：// eslint-disable-line 规则名称
+
+注意：
+
+1）如果代码中存在语法错误时，eslint是没有办法去检查问题代码和代码风格
+
+4.ESLint结合自动化工具
+
+优点：
+
+1）集成之后，ESLint一定会工作
+2）与项目统一，管理更方便
+
+eslint.format() 打印信息到控制台
+eslint.failAfterError() 检查到错误之后就中止管道
