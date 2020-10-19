@@ -1,0 +1,293 @@
+### 一. Vue.js 源码
+
+#### 1. 目录结构
+
+```
+- benchmarks 标准样例
+- dist 打包后的代码
+- example 例子
+- flow flow库
+- packages 包
+- scripts 打包脚本文件
+- src 源码
+	- compiler 编译相关（解析模板转换为 render ，再由 render 创建 Virtual Dom）
+	- core Vue 核心库
+		- components 定义了 Vue 中自带的组件
+		- global-api 定义了 Vue 中的静态方法
+		- instance 创建 Vue 实例，定义了 Vue 的构造函数，Vue 的初始化，生命周期等
+		- observer 响应式机制
+		- util 工具方法
+		- vdom Virtual Dom
+	- platforms 平台相关代码
+		- web web 端相关代码
+		- weex 移动端开发框架
+	- server SSR 服务端渲染
+	- sfc single file component，.vue 文件编译为 js 对象
+	- shared 公共代码
+```
+
+#### 2. Vue 的不同构建版本
+
+|                           | UMD                | CommonJS              | ES Module          |
+| ------------------------- | ------------------ | --------------------- | ------------------ |
+| Full                      | vue.js             | vue.common.js         | vue.esm.js         |
+| Runtime-only              | vue.runtime.js     | vue.runtime.common.js | vue.runtime.esm.js |
+| Full (Production)         | vue.min.js         |                       |                    |
+| Runtime-only (production) | vue.runtime.min.js |                       |                    |
+
+- 术语
+  - 完整版：同时包含**编译器**和**运行时**版本
+  - 编译器：用来将模板字符串编译为 JavaScript 渲染函数的代码，体积大，效率低。
+  - 运行时：用来创建 Vue 实例，渲染并处理 Virtual Dom 等的代码，体积小，效率高，基本上就是除去编译器的代码。
+  - UMD：UMD 版本**通用的模块版本**，支持多种模块方式（commonJS，AMD，直接把 Vue 实例挂载到 Window 对象上等），vue.js 默认文件就是运行时 + 编译器的 UMD 版本。
+  - CommonJS (cjs)：CommonJS 版本用来配合老的打包工具 Browserify 或 webpack1。
+  - ES Module：从 2.6 开始 Vue 会提供两个 ES Module (ESM) 构建文件，为现代打包工具提供的版本。
+    - ESM 格式被设计为可以被静态分析（在编译时处理），所以打包工具可以利用这一点来进行 tree-shanking 并将不用的代码排除出最终的包。
+- Vue cli 创建的项目
+  - vue inspect 查看 webpack 配置
+  - vue inspect > output.js 将配置输出到文件中
+
+#### 3. 响应式原理
+
+- el 不能是 body 或者 html 标签
+- 如果没有 render，把 template 转换成 render 函数
+- 如果有 render 方法，直接调用 mount 挂载 Dom
+- 四个导出 Vue 的模块
+  - src/platform/web/entry-runtime-with-compiler.js
+    - web 平台相关的入口
+    - 重写了平台相关的 $mount() 方法
+    - 注册了 Vue.compile() 方法，传递一个 HTML 字符串返回 render 函数
+  - src/platform/web/runtime/index.js
+    - web 平台相关
+    - 注册和平台相关的全局指令 v-model，v-show，全局组件 v-transition v-transition-group
+    - 全局方法
+      - \_\_patch\_\_ ：把虚拟 Dom 转换为真实 Dom
+      - $mount：挂载方法
+  - src/core/index.js
+    - 与平台无关
+    - 设置了 Vue 的静态方法，initGlobalAPI(Vue)
+  - src/core/instance/index.js
+    - 与平台无关
+    - 定义了构造函数，调用了 this._init(options) 方法
+    - 给 Vue 混入了常用的实例成员
+- 首次渲染过程
+  - Vue 初始化，实例成员，静态成员
+  - new Vue()
+  - this._init()
+  - vm.$mount()
+    - src/platform/web/enter-runtime-with-compiler.js
+    - 如果没有传入 render，把模板编译成 render 函数
+    - compileToFunction() 生成 render() 渲染函数
+    - options.render = render
+  - vm.$mount()
+    - src/platform/web/runtime/index.js
+    - mountComponent()
+  - mountComponent(this.el)
+    - src/core/instance/lifecycle.js
+    - 判断是否有 render 选项，如果没有但是传入了模板，并且当前是开发环境的话会发送警告
+    - 触发 beforeMount
+    - 定义 updateComponent
+      - vm.\_update(vm._render()...)
+      - vm._render() 渲染，渲染 Virtual Dom
+      - vm._update() 更新，将 Virtual Dom 转换成真实 Dom
+    - 创建 Watcher 实例
+      - updateComponent() 传递
+      - 调用 get() 方法
+    - 触发 mounted
+    - return vm
+  - watcher.get()
+    - 创建完 watcher 会调用一次 get
+    - 调用 updateComponent()
+    - 调用 vm._render() 创建 VNode
+      - 调用 render.call(vm._renderProxy,vm.$createElement)
+      - 调用实例化时 Vue 传入的 render()
+      - 或者编译 template 生成的 render()
+      - 返回 vnode
+    - 调用 vm._update(vnode...)
+      - 调用 vm.\_\_patch\_\_(vm.$el,vnode) 挂载真实 Dom
+      - 记录 vm.$el
+- Watcher 类
+  - Watcher 分为三种类型
+    - render Watcher（渲染 Watcher）
+    - Computed Watcher （计算属性 Watcher）
+    - Watch Watcher （侦听器 Watcher）
+    - 创建顺序：计算属性 Watcher，监听器 Watcher，渲染 Watcher
+    - 执行数序：计算属性 Watcher，监听器 Watcher，渲染 Watcher
+      - 在执行 Watcher 的时候，会调用 flushSchedulerQueue 方法，这个方法中会对 Wacther 进行由小到大的排序
+- 响应式处理过程
+  - initState() 初始化 Vue 实例的状态 --> initData() 把 data 属性注入到 Vue 实例中 --> observe() 把 data 对象转换为响应式对象
+  - observe(value)
+    - 位置：src/core/observer/index.js
+    - 判断 value 是否为对象，如果不是对象直接返回
+    - 判断 value 是否有  \_\_ob\_\_ 属性，如果有直接返回
+    - 如果没有，创建 Observer 对象
+    - 返回 Observer 对象
+  - Observer
+    - 位置：src/observer/index.js
+    - 给 value 对象定义不可枚举的 \_\_ob\_\_ 属性，记录当前的 Observer 对象
+    - 数组响应式处理
+    - 对象的响应式处理，调用 walk 方法
+  - defineReactive
+    - 位置：src/core/observer/index.js
+    - 为每一个属性创建 Dep 对象
+    - 如果当前属性的值是对象，调用 observe
+    - 定义 getter
+      - 收集依赖
+      - 返回属性的值
+    - 定义 setter
+      - 保存新值
+      - 如果新值是对象，调用 observe
+      - 派发更新，调用 dep.notify()
+  - 依赖收集
+    - 在 Watcher 中的 get 中调用，pushTarget 记录 Dep.target 属性
+    - 访问 data 中的成员的时候收集依赖，defineReactive 的 getter 中收集依赖
+    - 把属性对应的 Watcher 对象添加到 dep 的 subs 数组中
+    - 给 childOb 收集依赖，目的是子对象添加和删除成员时发送通知
+  - Watcher
+    - dep.notify() 在调用 Watcher 对象的 update() 方法
+    - queueWatcher() 判断 Watcher 是否被处理，如果没有的话添加到 queue 队列中，并调用 flushSchedulerQueue()
+    - flushSchedulerQueue
+      - 触发 beforeUpdate() 钩子函数
+      - 调用 watcher.run()
+        - run() --> get() --> getter() --> updateComponent()
+        - 清空上一次的依赖
+        - 触发 actived 钩子函数
+        - 触发 updated 钩子函数
+- set 方法
+  - 向响应式对象中添加一个 property，并确保这个新 property 同样是响应式的，且触发视图更新
+  - 不能给 Vue 实例或者 $data 添加响应式属性，会报出一个警告
+- delete 方法
+  - 删除对象的属性，如果对象时响应式的，确保删除能触发更新视图，这个方法主要用于 Vue 不能检测到属性被删除的限制
+  - 不能给 Vue 实例或者 $data 删除属性，会报出一个警告
+- $watch 方法
+  - 没有静态方法，因为 $watch 内部要使用 Vue 实例
+  - 观察 Vue 实例变化的一个表达式或计算属性，回调函数得到的参数为新值和旧值，表达式只接受监督的路径
+  - 对于更复杂的表达式，用一个函数取代
+- nextTick 方法
+  - Vue 更新 Dom 是异步执行的，批量的
+    - 在下次 Dom 更新循环结束之后执行延迟回调，在修改数据之后立即使用这个方法，获取更新后的 Dom
+
+#### 4. 虚拟 DOM
+
+- 概念
+  - 虚拟 DOM （Virtual Dom）是使用 JavaScript 对象描述真实 Dom
+  - Vue.js 中的虚拟 DOM 借鉴了 snabbdom，并添加了 Vue.js 特性，例如：指令和组件机制
+  - 为什么要使用虚拟 DOM
+    - 避免直接操作 DOM，开发过程只需要关注业务代码的实现，不需要关注如何操作 DOM，也不需要关注 DOM 浏览器兼容性问题，提高开发效率
+    - 作为一个中间层可以跨平台（WEB，SSR，WEEX）
+    - 虚拟 DOM 不一定会提高性能
+      - 首次渲染的时候会增加开销
+      - 复杂视图情况下会提升渲染性能
+  - h 函数
+    - vm.$createElement(tag, data, children, normalizeChildren)
+      - tag
+        - 标签名称或组件对象
+      - data
+        - 描述 tag，可以设置 Dom 的属性或标签的属性
+      - children
+        - tag 中文本内容或子节点
+- 过程
+  - vm.init()
+  - vm.$mount()
+  - mountComponent()
+  - 创建 Watcher 对象
+  - updateComponent()
+    - vm.update(vm._render(),hydrating)
+  - vm.render()
+    - vnode = render.call(vm.renderProxy,vm.$createElement)
+    - vm.$createElement()
+      - h 函数，用户设置的 render 中调用
+      - createElement(vm,a,b,c,d,true)
+    - vm._c()
+      - h 函数，模板编译的 render 中调用
+      - createElement(vm,a,b,c,d,false)
+    - _createElement()
+      - vnode = new VNode(config,parsePlatformTagName(tag),data,children,undefind,undefind,context)
+      - vm._render() 结束，返回 vnode
+  - vm._update()
+    - 负责把虚拟 DOM，渲染成真实 DOM
+    - 首次执行，vm.\_\_patch\_\_(vm.$el,vnode,hydrating,false)
+    - 数据更新，vm.\_\_patch\_\_(prevVnode,vnode)
+  - vm.\_\_patch\_\_()
+    - runtime/index.js 中挂载 Vue.prototype.\_\_patch\_\_()
+    - runtime/patch.js 的 patch 函数
+    - 设置 nodeOps 和 modules
+    - 调用 createPathFunction 函数，返回 patch 函数
+  - patch
+    - vdom/patch.js 中的 createPathFunction 返回 patch 函数
+    - 挂载 cbs 节点的属性/事件/样式操作的钩子函数
+    - 判断第一个参数是真实 DOM 还是虚拟 DOM，首次加载，第一个参数就是真实 DOM，转换成 VNode，调用 createElm
+    - 如果是数据更新的时候，新旧节点是 sameVnode 执行 patchVnode，也就是 Diff 算法
+    - 删除旧节点
+  - createElm(vnode,insertedVnodeQueue)
+    - 把虚拟节点，转换为真实 DOM，并插入到 DOM 树
+    - 把虚拟节点的 children，转换为真实 DOM，并插入到 DOM 树
+  - patchVnode
+    - 对比新旧 VNode，以及新旧 VNode 的子节点，更新差异
+    - 如果新旧 VNode 都有子节点并且子节点不同的话，会调用 updateChildren 对比子节点差异
+  - updateChildren
+    - 从头到尾开始依次找到相同的子节点进行比较 patchVnode，总共四种方式
+    - 在老节点的子节点中查找 newStartVnode，并进行处理
+    - 如果新节点比老节点多，把新增的子节点插入到 DOM 中
+    - 如果老节点比新节点多，把多余的老节点删除
+
+#### 5. 模板编译和组件化
+
+- 模板编译的作用
+  - Vue 2.x 使用 VNode 描述视图以及各种交互，用户自己编写 VNode 比较复杂
+  - 用户只需要编写类似 HTML 的代码 - Vue.js 模板，通过编译器将模板转换为 VNode 的 render 函数
+  - .vue 文件会被 webpack 在构建的过程中转换为 render 函数，内部通过 Vue.load 进行操作
+    - 编译过程
+      - 运行时编译
+        - 前提：必须使用完整版的 Vue
+      - 构建时编译
+    - 编译生成函数的位置
+      - _c()
+        - src/core/instance/render.js
+      - \_m()/\_v()\_s()
+        - src/core/instance/render-helper/index.js
+- 模板编译的入口
+  - compileToFunctions(template, {}, this)
+    - 返回 { render, staticRenderFns }
+  - createCompiler(baseOptions)
+    - 定义 compile(template, options) 函数
+    - 生成 createCompileFunctions
+      - createCompileFunctionFn(compile)
+    - 返回 { compile, compileToFunctions }
+    - compileToFunctions 函数是编译模板的入口
+  - createCompilerCreator(function baseCompile(){})
+    - 传入了 baseCompile(template, finalOptions) 函数
+    - baseCompile
+      - 解析 parse
+      - 优化 optimize
+      - 生成 generate
+    - 返回 createCompiler 函数
+  - 抽象语法树
+    - 简称 AST（Abstract Syntax Tree）
+    - 使用对象的形式描述树形的代码结构
+    - 此处的抽象语法树是用来描述树形结构的 HTML 字符串
+  - 为什么要使用抽象语法树
+    - 模板字符串转换为 AST 后，可以通过 AST 对模板做优化处理
+    - 标记模板中的静态内容，在 patch 的时候直接跳过静态内容
+    - 在 patch 的过程中静态内容不需要对比和重新渲染
+- 编译模板过程
+  - compileToFunctions(template...)
+    - 先从缓存中加载编译好的 render 函数
+    - 缓存中没有调用 compile(template, options)
+  - compile(template, options)
+    - 合并 options
+    - baseCompile(template.trim(), finalOptions)
+  - baseCompile(template.trim(), finalOptions)
+    - parse()
+      - 把 template 模板转换为 AST 语法树
+    - optimize()
+      - 标记 AST 语法树中的静态 sub Trees
+      - 检测到静态子树，设置为静态，不需要在每次重新渲染的时候重新生成节点
+      - patch 节点跳过静态子树
+    - generate()
+      - AST 语法树生成 js 的创建代码
+  - compileToFunctions(template...)
+    - 继续把上一步中生成的字符串形式 js 代码转换为函数
+    - createFunction()
+    - render 和 staticRenderFns 初始化完毕，挂载到 Vue 实例的 option 对应的属性中
+
